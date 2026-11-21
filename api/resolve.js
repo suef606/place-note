@@ -6,7 +6,7 @@ const ALLOWED_HOSTS = [
   // 카카오맵
   'kko.to', 'kakao.com', 'map.kakao.com', 'place.map.kakao.com', 'm.map.kakao.com',
   // 구글지도
-  'maps.app.goo.gl', 'goo.gl', 'g.co', 'google.com', 'www.google.com', 'maps.google.com',
+  'maps.app.goo.gl', 'goo.gl', 'g.co', 'share.google', 'google.com', 'www.google.com', 'maps.google.com',
   'google.co.kr', 'www.google.co.kr', 'maps.google.co.kr',
   // 네이버지도
   'naver.me', 'map.naver.com', 'm.map.naver.com', 'place.naver.com', 'm.place.naver.com',
@@ -83,7 +83,7 @@ function metaTitle(html) {
 // "장소 · 주소", "장소 - Google 지도", "장소 : 네이버" 같은 꼬리 떼기
 function clean(name) {
   return (name || '')
-    .replace(/\s*[-|:·]\s*(Google\s*(지도|Maps)|카카오맵|Kakao\s*Map|네이버\s*(지도|플레이스)?|NAVER.*)\s*$/i, '')
+    .replace(/\s*[-|:·]\s*(Google|구글|카카오|Kakao|네이버|NAVER)[\s\S]*$/i, '')
     .replace(/\s*·\s.*$/, '')
     .replace(/\+/g, ' ')
     .trim();

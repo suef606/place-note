@@ -331,7 +331,8 @@ async function findName() {
 }
 
 function refreshOpen() { $('openNaver').disabled = !$('placeName').value.trim(); }
-function syncSaveName() { if ($('placeName').value.trim()) $('fName').value = $('placeName').value.trim(); }
+function syncSaveName() {
+  if (/^https?:\/\//i.test($('placeName').value.trim())) { $('placeName').value = ''; refreshOpen(); return; } if ($('placeName').value.trim()) $('fName').value = $('placeName').value.trim(); }
 
 let debounce;
 $('msg').addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(findName, 350); });
