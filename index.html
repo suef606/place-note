@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>place-note · 받은 장소를 네이버지도로</title>
+<meta name="description" content="카카오맵·구글지도·네이버지도로 받은 장소를 네이버지도에서 열고, 추천한 사람·상태·후기를 함께 남기는 페이지">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --cream:#F6F1EA; --paper:#FCFAF6; --oak:#E4D3BB; --oak-deep:#C9AE88;
+  --walnut:#9A6B47; --cognac:#9B5A48; --brass:#A8875A; --sage:#6F8A5F;
+  --ink:#2E2621; --muted:#6E6259; --line:#E6DCCD; --glow:#FFD9A0;
+  --naver:#03C75A; --danger:#B4452F; --radius:22px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:"Pretendard Variable","Pretendard",-apple-system,system-ui,sans-serif;
+  background:var(--cream);color:var(--ink);font-size:18px;line-height:1.7;word-break:keep-all;letter-spacing:-0.01em}
+a{color:inherit;text-decoration:none}
+button,input,textarea,select{font:inherit;color:inherit}
+[hidden]{display:none !important}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+section{padding:20px 0}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--cognac);letter-spacing:.02em}
+.eyebrow::before{content:"";width:22px;height:2px;background:currentColor;border-radius:2px}
+
+/* 상단 바 */
+.top{position:sticky;top:0;z-index:20;background:rgba(246,241,234,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;height:64px}
+.logo{font-weight:800;font-size:20px;letter-spacing:-0.02em}
+.logo b{color:var(--cognac)}
+.who{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);min-width:0}
+.who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+
+/* 버튼 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;border:0;border-radius:999px;cursor:pointer;transition:transform .15s,background .15s,opacity .15s;text-align:center}
+.btn:active{transform:scale(.98)}
+.btn-lg{font-size:18px;padding:15px 26px;min-height:56px}
+.btn-sm{font-size:14px;padding:8px 14px;min-height:38px}
+.btn-naver{background:var(--naver);color:#fff;box-shadow:0 10px 24px -10px rgba(3,199,90,.7)}
+.btn-naver:hover{background:#02b351}
+.btn-main{background:var(--cognac);color:#fff;box-shadow:0 10px 24px -10px rgba(155,90,72,.7)}
+.btn-main:hover{background:#874b3b}
+.btn-ink{background:var(--ink);color:var(--paper)}
+.btn-ghost{background:var(--paper);border:1.5px solid var(--oak-deep);color:var(--ink)}
+.btn-danger{background:var(--paper);border:1.5px solid #E2B7AB;color:var(--danger)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}
+
+/* 첫 화면 */
+.hero{padding:34px 0 10px}
+.hero h1{font-size:clamp(32px,8.6vw,54px);font-weight:800;line-height:1.24;letter-spacing:-0.04em;margin:12px 0 14px}
+.kw{position:relative;display:inline-block;animation:kwColor 9s ease-in-out infinite}
+.kw::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:.16em;border-radius:4px;background:currentColor;opacity:.22}
+@keyframes kwColor{0%,100%{color:var(--cognac)}25%{color:var(--brass)}50%{color:var(--sage)}75%{color:var(--walnut)}}
+.hero .sub{font-size:clamp(17px,4.4vw,20px);color:var(--muted);max-width:34em}
+
+/* 패널 */
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:24px 20px;box-shadow:0 30px 60px -40px rgba(80,55,35,.45)}
+.panel-head{display:flex;align-items:center;font-size:21px;font-weight:800;margin-bottom:16px;letter-spacing:-0.02em}
+.step{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;background:var(--oak);color:var(--walnut);font-weight:800;font-size:16px;margin-right:10px;flex:none}
+label{display:block;font-size:16px;font-weight:700;margin:0 0 8px}
+.hint{font-size:14px;color:var(--muted);font-weight:500;margin-left:6px}
+textarea,input[type=text],input[type=email],input[type=date],select{width:100%;background:var(--cream);border:1.5px solid var(--line);border-radius:16px;padding:13px 16px;font-size:17px;outline:none;transition:border-color .15s,background .15s}
+textarea{min-height:110px;resize:vertical;line-height:1.6}
+textarea:focus,input:focus,select:focus{border-color:var(--oak-deep);background:#fff}
+.row{display:flex;flex-direction:column;gap:10px}
+.note{margin-top:10px;font-size:14px;color:var(--muted);min-height:1.4em}
+.note.ok{color:var(--sage);font-weight:700}
+.note.err{color:var(--danger);font-weight:700}
+
+/* 로그인 */
+.login{max-width:560px;margin:0 auto}
+.login p{color:var(--muted);font-size:16px;margin-bottom:16px}
+
+/* 연결 전 안내 */
+.setup{border:2px dashed var(--oak-deep);background:transparent;border-radius:20px;padding:18px 20px;font-size:16px;color:var(--muted)}
+.setup b{color:var(--ink)}
+
+/* 저장 폼 */
+.form-grid{display:grid;gap:16px}
+.status-pick{display:flex;gap:10px}
+.status-pick input{position:absolute;opacity:0;pointer-events:none}
+.status-pick label{flex:1;margin:0;text-align:center;padding:12px 10px;border-radius:999px;border:1.5px solid var(--oak-deep);font-size:16px;cursor:pointer;background:var(--paper)}
+.status-pick input:checked + label{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.status-pick input:focus-visible + label{outline:3px solid var(--glow)}
+
+/* 목록 */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;font-size:15px;font-weight:700;padding:9px 16px;border-radius:999px;background:var(--cream);border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--cognac);border-color:var(--cognac);color:#fff}
+.chips.status .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink)}
+.filters{display:grid;gap:10px;margin-bottom:16px}
+.places{display:grid;gap:14px;list-style:none}
+.place{background:var(--cream);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.place-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.place h3{font-size:20px;font-weight:800;letter-spacing:-0.02em;line-height:1.35}
+.badge{flex:none;font-size:14px;font-weight:700;padding:5px 12px;border-radius:999px;color:#fff;border:0;cursor:pointer}
+.badge.want{background:var(--brass)}
+.badge.been{background:var(--sage)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:15px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:700}
+.folder-tag{display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--oak);color:var(--walnut)}
+.memo{margin-top:8px;font-size:16px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.edit-box,.review-box{margin-top:14px;padding:16px;border-radius:18px;background:var(--paper);border:1px solid var(--line);display:grid;gap:12px}
+.reviews{list-style:none;margin-top:12px;display:grid;gap:8px}
+.review{background:var(--paper);border-radius:14px;padding:12px 14px;font-size:15px;border:1px solid var(--line)}
+.review .r-top{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:14px}
+.stars{color:var(--brass);letter-spacing:1px}
+.empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:16px}
+
+footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40px}
+
+@media (min-width:720px){
+  section{padding:26px 0}
+  .panel{padding:32px}
+  .row{flex-direction:row;align-items:stretch}
+  .row > input{flex:1}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .form-grid .full{grid-column:1/-1}
+  .places{grid-template-columns:repeat(2,1fr)}
+  .filters{grid-template-columns:auto 1fr;align-items:center}
+}
+@media (min-width:1000px){ .places{grid-template-columns:repeat(3,1fr)} }
+@media (prefers-reduced-motion:reduce){ .kw{animation:none} html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a href="#top" class="logo">place<b>-note</b></a>
+    <div class="who" id="who" hidden>
+      <span id="whoEmail"></span>
+      <button class="btn btn-sm btn-ghost" id="logoutBtn" type="button">로그아웃</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <span class="eyebrow">카카오맵 · 구글지도 · 네이버지도 → 네이버지도</span>
+    <h1>받은 장소를<br><span class="kw">클릭 한 번</span>으로 네이버지도에서</h1>
+    <p class="sub">링크만 붙여 넣으면 장소 이름을 찾아 줘요. 저장할 때 추천한 사람, 상태, 폴더를 남기고, 가 본 뒤에는 후기를 쌓아요.</p>
+  </div>
+</section>
+
+<!-- 연결 전 안내 -->
+<section id="setupSec" hidden>
+  <div class="wrap">
+    <div class="setup"><b>Supabase 연결 전이에요.</b> 코드 맨 아래의 <b>SUPABASE_URL</b>과 <b>SUPABASE_KEY</b>(publishable 키)를 채우면 로그인과 저장이 켜져요. 링크 열기는 지금도 쓸 수 있어요.</div>
+  </div>
+</section>
+
+<!-- 1. 링크 붙여 넣고 열기 (로그인 없이도 사용 가능) -->
+<section id="open">
+  <div class="wrap">
+    <div class="panel">
+      <div class="panel-head"><span class="step">1</span>링크 붙여 넣기</div>
+      <label for="msg">친구에게 받은 장소 링크 <span class="hint">공유 글 전체를 붙여 넣어도 돼요</span></label>
+      <textarea id="msg" placeholder="예: https://kko.to/... / https://maps.app.goo.gl/... / https://naver.me/..."></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-sm btn-ghost" id="pasteBtn" type="button">📋 붙여넣기</button>
+        <button class="btn btn-sm btn-ghost" id="clearBtn" type="button">지우기</button>
+      </div>
+
+      <div style="margin-top:18px">
+        <label for="placeName">찾은 장소 이름 <span class="hint">틀리면 직접 고쳐 주세요</span></label>
+        <div class="row">
+          <input type="text" id="placeName" placeholder="링크를 붙여 넣으면 여기에 들어가요" maxlength="200">
+          <button class="btn btn-lg btn-naver" id="openNaver" type="button" disabled>네이버지도에서 열기</button>
+        </div>
+        <p class="note" id="findNote"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 로그인 -->
+<section id="loginSec" hidden>
+  <div class="wrap">
+    <div class="panel login">
+      <div class="panel-head"><span class="step">🔑</span>로그인하고 저장하기</div>
+      <p>비밀번호 없이 이메일로 로그인해요. 받은 메일의 링크를 누르면 이 페이지로 돌아와요. 내가 저장한 장소는 나만 볼 수 있어요.</p>
+      <form id="loginForm" class="row">
+        <input type="email" id="loginEmail" placeholder="이메일 주소" required autocomplete="email">
+        <button class="btn btn-lg btn-main" type="submit" id="loginBtn">로그인 메일 받기</button>
+      </form>
+      <p class="note" id="loginNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 저장 -->
+<section id="save" hidden>
+  <div class="wrap">
+    <div class="panel">
+      <div class="panel-head"><span class="step">2</span>장소 저장하기</div>
+      <form class="form-grid" id="saveForm">
+        <div>
+          <label for="fName">장소 이름</label>
+          <input type="text" id="fName" required maxlength="200">
+        </div>
+        <div>
+          <label for="fWho">추천한 사람</label>
+          <input type="text" id="fWho" maxlength="100">
+        </div>
+        <div>
+          <label for="fFolder">폴더 <span class="hint">예: 친구, 직장</span></label>
+          <input type="text" id="fFolder" list="folderList" maxlength="50">
+          <datalist id="folderList"></datalist>
+        </div>
+        <div>
+          <label id="stLabel">상태</label>
+          <div class="status-pick" role="radiogroup" aria-labelledby="stLabel">
+            <input type="radio" name="st" id="stWant" value="want" checked><label for="stWant">가고 싶음</label>
+            <input type="radio" name="st" id="stBeen" value="been"><label for="stBeen">가 봤음</label>
+          </div>
+        </div>
+        <div class="full">
+          <label for="fMemo">한 줄 메모</label>
+          <input type="text" id="fMemo" maxlength="300">
+        </div>
+        <div class="full">
+          <button class="btn btn-lg btn-main" type="submit" id="saveBtn">저장하기</button>
+          <p class="note" id="saveNote"></p>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 목록 -->
+<section id="list" hidden>
+  <div class="wrap">
+    <div class="panel">
+      <div class="panel-head"><span class="step">3</span>저장된 장소</div>
+      <div class="filters">
+        <div class="chips status" id="statusChips" role="group" aria-label="상태별로 보기">
+          <button class="chip" type="button" data-st="all" aria-pressed="true">전체</button>
+          <button class="chip" type="button" data-st="want" aria-pressed="false">가고 싶음</button>
+          <button class="chip" type="button" data-st="been" aria-pressed="false">가 봤음</button>
+        </div>
+        <div class="chips" id="folderChips" role="group" aria-label="폴더별로 보기"></div>
+      </div>
+      <ul class="places" id="places"></ul>
+      <p class="empty" id="empty" hidden>아직 저장한 장소가 없어요.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>place-note</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===== Supabase 연결 값 (publishable 키만! secret 키는 절대 넣지 않기) ===== */
+const SUPABASE_URL = 'https://lzckkpdsijaafwgtbdot.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_0oLiD6qBdDAHmIf94UnEbQ_GUKzjJm-';
+/* ========================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const configured = !SUPABASE_URL.startsWith('YOUR_') && !SUPABASE_KEY.startsWith('YOUR_');
+const sb = configured ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+let places = [];
+let reviews = [];
+let filterStatus = 'all';
+let filterFolder = 'all';
+let lastSourceUrl = '';
+
+const naverSearch = (name) => 'https://map.naver.com/p/search/' + encodeURIComponent(name);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const fmtDate = (d) => { const t = new Date(d); return isNaN(t) ? '' : `${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')}`; };
+const stars = (n) => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
+function note(el, text, kind) { el.textContent = text || ''; el.className = 'note' + (kind ? ' ' + kind : ''); }
+
+/* ---------- 1. 링크 → 장소 이름 ---------- */
+const URL_RE = /https?:\/\/[^\s<>"']+/i;
+
+// 링크가 없을 때: 공유 글에서 이름 고르기
+function pickName(text) {
+  for (const line of text.split(/\r?\n/)) {
+    const l = line.replace(/https?:\/\/\S+/g, '').replace(/\[[^\]]*\]/g, '')
+      .replace(/카카오맵|네이버\s*지도|google\s*(지도|maps)/gi, '')
+      .replace(/^[\s:·\-|]+|[\s:·\-|]+$/g, '').trim();
+    if (l) return l;
+  }
+  return '';
+}
+
+let findSeq = 0;
+async function findName() {
+  const text = $('msg').value.trim();
+  const seq = ++findSeq;
+  if (!text) { $('placeName').value = ''; note($('findNote'), ''); refreshOpen(); return; }
+
+  const textName = pickName(text);
+  const link = (text.match(URL_RE) || [])[0];
+  lastSourceUrl = link || '';
+
+  if (!link) {
+    $('placeName').value = textName;
+    note($('findNote'), textName ? '붙여 넣은 글에서 이름을 골랐어요.' : '');
+    syncSaveName(); refreshOpen(); return;
+  }
+
+  note($('findNote'), '링크에서 장소 이름을 찾는 중이에요…');
+  try {
+    const res = await fetch('/api/resolve?url=' + encodeURIComponent(link));
+    const data = await res.json().catch(() => ({}));
+    if (seq !== findSeq) return;
+    if (res.ok && data.name) {
+      $('placeName').value = data.name;
+      const from = { kakao: '카카오맵', google: '구글지도', naver: '네이버지도' }[data.source] || '링크';
+      note($('findNote'), `${from} 링크에서 찾았어요: ${data.name}`, 'ok');
+    } else {
+      $('placeName').value = textName;
+      note($('findNote'), textName
+        ? '링크에서는 못 찾아서 함께 붙여 넣은 글에서 골랐어요. 맞는지 확인해 주세요.'
+        : (data.error || '장소 이름을 찾지 못했어요') + ' — 이름을 직접 써 주세요.', textName ? '' : 'err');
+    }
+  } catch {
+    if (seq !== findSeq) return;
+    $('placeName').value = textName;
+    note($('findNote'), '링크 읽기는 Vercel 주소에서만 돼요. 이름을 직접 써 주세요.', 'err');
+  }
+  syncSaveName(); refreshOpen();
+}
+
+function refreshOpen() { $('openNaver').disabled = !$('placeName').value.trim(); }
+function syncSaveName() { if ($('placeName').value.trim()) $('fName').value = $('placeName').value.trim(); }
+
+let debounce;
+$('msg').addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(findName, 350); });
+$('placeName').addEventListener('input', () => { refreshOpen(); syncSaveName(); });
+$('openNaver').addEventListener('click', () => {
+  const q = $('placeName').value.trim();
+  if (q) window.open(naverSearch(q), '_blank', 'noopener');
+});
+$('clearBtn').addEventListener('click', () => { $('msg').value = ''; findName(); $('msg').focus(); });
+$('pasteBtn').addEventListener('click', async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t) { $('msg').value = t; findName(); }
+  } catch {
+    note($('findNote'), '붙여넣기 권한이 없어요. 칸을 길게 눌러 직접 붙여 넣어 주세요.', 'err');
+    $('msg').focus();
+  }
+});
+
+/* ---------- 로그인 ---------- */
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('loginEmail').value.trim();
+  if (!email) return;
+  $('loginBtn').disabled = true;
+  note($('loginNote'), '메일을 보내는 중이에요…');
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + location.pathname },
+  });
+  $('loginBtn').disabled = false;
+  if (error) note($('loginNote'), '메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요. (' + error.message + ')', 'err');
+  else note($('loginNote'), '메일을 보냈어요! 받은편지함(또는 스팸함)에서 로그인 링크를 눌러 주세요.', 'ok');
+});
+
+$('logoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); });
+
+function showSignedIn(user) {
+  $('loginSec').hidden = !!user;
+  $('save').hidden = !user;
+  $('list').hidden = !user;
+  $('who').hidden = !user;
+  $('whoEmail').textContent = user ? user.email : '';
+  if (user) loadAll(); else { places = []; reviews = []; render(); }
+}
+
+/* ---------- 2. 저장 ---------- */
+$('saveForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('fName').value.trim();
+  if (!name) { note($('saveNote'), '장소 이름을 써 주세요.', 'err'); return; }
+  $('saveBtn').disabled = true;
+  note($('saveNote'), '저장하는 중이에요…');
+  const row = {
+    name,
+    recommender: $('fWho').value.trim() || null,
+    folder: $('fFolder').value.trim() || null,
+    status: document.querySelector('input[name=st]:checked').value,
+    memo: $('fMemo').value.trim() || null,
+    naver_url: naverSearch(name),
+    source_url: lastSourceUrl || null,
+  };
+  const { error } = await sb.from('places').insert(row);
+  $('saveBtn').disabled = false;
+  if (error) { note($('saveNote'), '저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'err'); console.error(error); return; }
+  note($('saveNote'), `"${name}" 저장했어요!`, 'ok');
+  $('fName').value = ''; $('fWho').value = ''; $('fMemo').value = '';
+  $('msg').value = ''; $('placeName').value = ''; lastSourceUrl = ''; note($('findNote'), ''); refreshOpen();
+  await loadAll();
+});
+
+/* ---------- 3. 목록 ---------- */
+async function loadAll() {
+  const [p, r] = await Promise.all([
+    sb.from('places').select('*').order('created_at', { ascending: false }),
+    sb.from('reviews').select('*').order('visited_on', { ascending: false, nullsFirst: false }),
+  ]);
+  if (p.error || r.error) { console.error(p.error || r.error); $('empty').hidden = false; $('empty').textContent = '목록을 불러오지 못했어요. 새로고침해 주세요.'; return; }
+  places = p.data; reviews = r.data;
+  render();
+}
+
+function render() {
+  // 폴더 목록
+  const folders = [...new Set(places.map((x) => x.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
+  if (filterFolder !== 'all' && filterFolder !== 'none' && !folders.includes(filterFolder)) filterFolder = 'all';
+  $('folderList').innerHTML = folders.map((f) => `<option value="${esc(f)}">`).join('');
+  const hasNone = places.some((x) => !x.folder);
+  const fChips = [['all', '📁 모든 폴더']].concat(folders.map((f) => [f, f]));
+  if (hasNone && folders.length) fChips.push(['none', '폴더 없음']);
+  $('folderChips').innerHTML = fChips.map(([v, label]) => {
+    const n = v === 'all' ? places.length : v === 'none' ? places.filter((x) => !x.folder).length : places.filter((x) => x.folder === v).length;
+    return `<button class="chip" type="button" data-folder="${esc(v)}" aria-pressed="${filterFolder === v}">${esc(label)} ${n}</button>`;
+  }).join('');
+
+  const shown = places.filter((x) =>
+    (filterStatus === 'all' || x.status === filterStatus) &&
+    (filterFolder === 'all' || (filterFolder === 'none' ? !x.folder : x.folder === filterFolder)));
+
+  $('empty').hidden = shown.length > 0;
+  $('empty').textContent = places.length ? '이 조건에 맞는 장소가 없어요.' : '아직 저장한 장소가 없어요.';
+
+  $('places').innerHTML = shown.map((x) => {
+    const rs = reviews.filter((r) => r.place_id === x.id);
+    return `
+    <li class="place" data-id="${x.id}">
+      <div class="place-top">
+        <h3>${esc(x.name)}</h3>
+        <button class="badge ${x.status}" type="button" data-act="toggle" title="눌러서 상태 바꾸기">${x.status === 'been' ? '가 봤음' : '가고 싶음'}</button>
+      </div>
+      <div class="meta">
+        ${x.folder ? `<span class="folder-tag">${esc(x.folder)}</span>` : ''}
+        ${x.recommender ? `<span>추천 <b>${esc(x.recommender)}</b></span>` : ''}
+        <span>${fmtDate(x.created_at)} 저장</span>
+      </div>
+      ${x.memo ? `<p class="memo">${esc(x.memo)}</p>` : ''}
+      ${rs.length ? `<ul class="reviews">${rs.map((r) => `
+        <li class="review">
+          <div class="r-top">
+            ${r.visited_on ? `<span>${fmtDate(r.visited_on)}</span>` : ''}
+            ${r.with_whom ? `<span>${esc(r.with_whom)}와(과)</span>` : ''}
+            ${r.rating ? `<span class="stars" aria-label="별점 ${r.rating}점">${stars(r.rating)}</span>` : ''}
+          </div>
+          ${r.comment ? `<div>${esc(r.comment)}</div>` : ''}
+        </li>`).join('')}</ul>` : ''}
+      <div class="actions">
+        <a class="btn btn-sm btn-naver" href="${esc(x.naver_url || naverSearch(x.name))}" target="_blank" rel="noopener">네이버지도</a>
+        <button class="btn btn-sm btn-ghost" type="button" data-act="review">✍️ 후기</button>
+        <button class="btn btn-sm btn-ghost" type="button" data-act="edit">고치기</button>
+        <button class="btn btn-sm btn-danger" type="button" data-act="del">지우기</button>
+      </div>
+      <div class="slot"></div>
+    </li>`;
+  }).join('');
+}
+
+$('statusChips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  filterStatus = b.dataset.st;
+  $('statusChips').querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', c === b));
+  render();
+});
+$('folderChips').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  filterFolder = b.dataset.folder; render();
+});
+
+$('places').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const li = btn.closest('.place'); const id = li.dataset.id;
+  const x = places.find((p) => p.id === id); if (!x) return;
+  const slot = li.querySelector('.slot');
+  const act = btn.dataset.act;
+
+  if (act === 'toggle') {
+    const status = x.status === 'been' ? 'want' : 'been';
+    btn.disabled = true;
+    const { error } = await sb.from('places').update({ status }).eq('id', id);
+    if (error) { btn.disabled = false; alertSlot(slot, '상태를 바꾸지 못했어요.'); return; }
+    x.status = status; render(); return;
+  }
+
+  if (act === 'del') {
+    if (btn.dataset.sure !== '1') { btn.dataset.sure = '1'; btn.textContent = '정말 지울까요?'; setTimeout(() => { btn.dataset.sure = ''; btn.textContent = '지우기'; }, 4000); return; }
+    const { error } = await sb.from('places').delete().eq('id', id);
+    if (error) { alertSlot(slot, '지우지 못했어요.'); return; }
+    await loadAll(); return;
+  }
+
+  if (act === 'edit') {
+    if (slot.innerHTML) { slot.innerHTML = ''; return; }
+    slot.innerHTML = `
+      <form class="edit-box">
+        <div><label>장소 이름</label><input type="text" name="name" maxlength="200" required value="${esc(x.name)}"></div>
+        <div><label>추천한 사람</label><input type="text" name="recommender" maxlength="100" value="${esc(x.recommender || '')}"></div>
+        <div><label>폴더</label><input type="text" name="folder" maxlength="50" list="folderList" value="${esc(x.folder || '')}"></div>
+        <div><label>상태</label><select name="status"><option value="want"${x.status==='want'?' selected':''}>가고 싶음</option><option value="been"${x.status==='been'?' selected':''}>가 봤음</option></select></div>
+        <div><label>한 줄 메모</label><input type="text" name="memo" maxlength="300" value="${esc(x.memo || '')}"></div>
+        <div class="actions" style="margin-top:0"><button class="btn btn-sm btn-ink" type="submit">고친 내용 저장</button><button class="btn btn-sm btn-ghost" type="button" data-cancel>닫기</button></div>
+        <p class="note"></p>
+      </form>`;
+    const f = slot.querySelector('form');
+    f.querySelector('[data-cancel]').onclick = () => (slot.innerHTML = '');
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const name = f.name.value.trim(); if (!name) return;
+      const upd = { name, recommender: f.recommender.value.trim() || null, folder: f.folder.value.trim() || null, status: f.status.value, memo: f.memo.value.trim() || null };
+      if (name !== x.name) upd.naver_url = naverSearch(name);
+      const { error } = await sb.from('places').update(upd).eq('id', id);
+      if (error) { note(f.querySelector('.note'), '저장하지 못했어요. 다시 시도해 주세요.', 'err'); return; }
+      await loadAll();
+    };
+    return;
+  }
+
+  if (act === 'review') {
+    if (slot.innerHTML) { slot.innerHTML = ''; return; }
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    slot.innerHTML = `
+      <form class="review-box">
+        <div><label>간 날짜</label><input type="date" name="visited_on" value="${today}"></div>
+        <div><label>누구랑 갔나요</label><input type="text" name="with_whom" maxlength="100"></div>
+        <div><label>평가</label><select name="rating"><option value="">선택 안 함</option><option value="5">★★★★★ 5</option><option value="4">★★★★☆ 4</option><option value="3">★★★☆☆ 3</option><option value="2">★★☆☆☆ 2</option><option value="1">★☆☆☆☆ 1</option></select></div>
+        <div><label>한 줄 후기</label><input type="text" name="comment" maxlength="500"></div>
+        <div class="actions" style="margin-top:0"><button class="btn btn-sm btn-main" type="submit">후기 남기기</button><button class="btn btn-sm btn-ghost" type="button" data-cancel>닫기</button></div>
+        <p class="note">후기를 남기면 상태가 '가 봤음'으로 바뀌어요.</p>
+      </form>`;
+    const f = slot.querySelector('form');
+    f.querySelector('[data-cancel]').onclick = () => (slot.innerHTML = '');
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const row = {
+        place_id: id,
+        visited_on: f.visited_on.value || null,
+        with_whom: f.with_whom.value.trim() || null,
+        rating: f.rating.value ? Number(f.rating.value) : null,
+        comment: f.comment.value.trim() || null,
+      };
+      if (!row.visited_on && !row.with_whom && !row.rating && !row.comment) { note(f.querySelector('.note'), '한 칸 이상 채워 주세요.', 'err'); return; }
+      const { error } = await sb.from('reviews').insert(row);
+      if (error) { note(f.querySelector('.note'), '후기를 저장하지 못했어요. 다시 시도해 주세요.', 'err'); return; }
+      if (x.status !== 'been') await sb.from('places').update({ status: 'been' }).eq('id', id);
+      await loadAll();
+    };
+  }
+});
+
+function alertSlot(slot, msg) { slot.innerHTML = `<p class="note err">${esc(msg)} 잠시 후 다시 시도해 주세요.</p>`; }
+
+/* ---------- 시작 ---------- */
+if (!configured) {
+  $('setupSec').hidden = false;
+} else {
+  sb.auth.onAuthStateChange((_event, session) => showSignedIn(session ? session.user : null));
+}
+</script>
+</body>
+</html>
