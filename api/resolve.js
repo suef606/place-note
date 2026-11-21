@@ -4,7 +4,7 @@
 
 const ALLOWED_HOSTS = [
   // 카카오맵
-  'kko.to', 'kakao.com', 'map.kakao.com', 'place.map.kakao.com', 'm.map.kakao.com',
+  'kko.to', 'kakao.com', 'map.kakao.com', 'place.map.kakao.com', 'm.map.kakao.com', 'place-api.map.kakao.com',
   // 구글지도
   'maps.app.goo.gl', 'goo.gl', 'g.co', 'share.google', 'google.com', 'www.google.com', 'maps.google.com',
   'google.co.kr', 'www.google.co.kr', 'maps.google.co.kr',
@@ -105,20 +105,30 @@ function fromUrl(finalUrl) {
   return '';
 }
 
-async function kakaoById(finalUrl) {
+async function kakaoById(finalUrl, log) {
   const m = finalUrl.match(/place\.map\.kakao\.com\/(?:m\/)?(\d+)/) || finalUrl.match(/[?&]itemId=(\d+)/);
   if (!m) return '';
   // 카카오맵 장소 페이지가 쓰는 정보 주소 (공식 API 아님 — 바뀌면 안 될 수 있음)
-  for (const api of [`https://place.map.kakao.com/main/v/${m[1]}`, `https://place.map.kakao.com/m/main/v/${m[1]}`]) {
+  const id = m[1];
+  const tries = [
+    [`https://place-api.map.kakao.com/places/panel3/${id}`, { pf: 'web' }],
+    [`https://place.map.kakao.com/main/v/${id}`, {}],
+    [`https://place.map.kakao.com/m/main/v/${id}`, {}],
+  ];
+  for (const [api, extra] of tries) {
     try {
-      const res = await fetch(api, { headers: { 'User-Agent': UA, Referer: `https://place.map.kakao.com/${m[1]}` } });
+      const res = await fetch(api, {
+        headers: { 'User-Agent': UA, Referer: `https://place.map.kakao.com/${id}`, Accept: 'application/json', ...extra },
+      });
+      log.push(`${api.replace(/^https:\/\//, '').split('/')[0]} ${res.status}`);
       if (!res.ok) continue;
       const j = await res.json();
-      const n = j?.basicInfo?.placenamefull || j?.basicInfo?.placename;
+      const n = j?.summary?.name || j?.basicInfo?.placenamefull || j?.basicInfo?.placename || j?.name;
       if (n) return n;
-    } catch { /* 다음 방법으로 */ }
+    } catch (e) { log.push(`${api.split('/')[2]} 오류`); }
   }
-  return '';
+  // 마지막: 장소 페이지 제목 읽기
+  return clean(metaTitle(await getHtml(`https://place.map.kakao.com/${id}`)));
 }
 
 async function naverById(finalUrl) {
@@ -139,12 +149,13 @@ export default async function handler(req, res) {
     const source = sourceOf(finalUrl);
 
     let name = clean(fromUrl(finalUrl));
-    if (!name && source === 'kakao') name = await kakaoById(finalUrl);
+    const log = [];
+    if (!name && source === 'kakao') name = await kakaoById(finalUrl, log);
     if (!name && source === 'naver') name = await naverById(finalUrl);
     if (!name) name = clean(metaTitle(html));
     if (GENERIC.test(name)) name = '';
 
-    if (!name) return res.status(404).json({ error: '장소 이름을 찾지 못했어요', finalUrl, source });
+    if (!name) return res.status(404).json({ error: '장소 이름을 찾지 못했어요', finalUrl, source, debug: log.join(' / ') });
     return res.status(200).json({ name, finalUrl, source });
   } catch (e) {
     return res.status(502).json({ error: '링크를 열지 못했어요' });

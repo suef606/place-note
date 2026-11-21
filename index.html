@@ -270,6 +270,8 @@ let reviews = [];
 let filterStatus = 'all';
 let filterFolder = 'all';
 let lastSourceUrl = '';
+let lastNaverUrl = '';
+const cleanName = (n) => String(n || '').replace(/\s*[-|:·]\s*(Google|구글|카카오|Kakao|네이버|NAVER)[\s\S]*$/i, '').trim();
 
 const naverSearch = (name) => 'https://map.naver.com/p/search/' + encodeURIComponent(name);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -295,6 +297,7 @@ let findSeq = 0;
 async function findName() {
   const text = $('msg').value.trim();
   const seq = ++findSeq;
+  lastNaverUrl = '';
   if (!text) { $('placeName').value = ''; note($('findNote'), ''); refreshOpen(); return; }
 
   const textName = pickName(text);
@@ -313,7 +316,10 @@ async function findName() {
     const data = await res.json().catch(() => ({}));
     if (seq !== findSeq) return;
     if (res.ok && data.name) {
+      data.name = cleanName(data.name);
       $('placeName').value = data.name;
+      lastNaverUrl = (data.source === 'naver' && /\/place\/\d+/.test(data.finalUrl || ''))
+        ? 'https://map.naver.com/p/entry/place/' + data.finalUrl.match(/\/place\/(\d+)/)[1] : '';
       const from = { kakao: '카카오맵', google: '구글지도', naver: '네이버지도' }[data.source] || '링크';
       note($('findNote'), `${from} 링크에서 찾았어요: ${data.name}`, 'ok');
     } else {
@@ -336,10 +342,10 @@ function syncSaveName() {
 
 let debounce;
 $('msg').addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(findName, 350); });
-$('placeName').addEventListener('input', () => { refreshOpen(); syncSaveName(); });
+$('placeName').addEventListener('input', () => { lastNaverUrl = ''; refreshOpen(); syncSaveName(); });
 $('openNaver').addEventListener('click', () => {
-  const q = $('placeName').value.trim();
-  if (q) window.open(naverSearch(q), '_blank', 'noopener');
+  const q = cleanName($('placeName').value);
+  if (q) window.open(lastNaverUrl || naverSearch(q), '_blank', 'noopener');
 });
 $('clearBtn').addEventListener('click', () => { $('msg').value = ''; findName(); $('msg').focus(); });
 $('pasteBtn').addEventListener('click', async () => {
@@ -392,7 +398,7 @@ $('saveForm').addEventListener('submit', async (e) => {
     folder: $('fFolder').value.trim() || null,
     status: document.querySelector('input[name=st]:checked').value,
     memo: $('fMemo').value.trim() || null,
-    naver_url: naverSearch(name),
+    naver_url: (lastNaverUrl && name === cleanName($('placeName').value)) ? lastNaverUrl : naverSearch(name),
     source_url: lastSourceUrl || null,
   };
   const { error } = await sb.from('places').insert(row);
@@ -400,7 +406,7 @@ $('saveForm').addEventListener('submit', async (e) => {
   if (error) { note($('saveNote'), '저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'err'); console.error(error); return; }
   note($('saveNote'), `"${name}" 저장했어요!`, 'ok');
   $('fName').value = ''; $('fWho').value = ''; $('fMemo').value = '';
-  $('msg').value = ''; $('placeName').value = ''; lastSourceUrl = ''; note($('findNote'), ''); refreshOpen();
+  $('msg').value = ''; $('placeName').value = ''; lastSourceUrl = ''; lastNaverUrl = ''; note($('findNote'), ''); refreshOpen();
   await loadAll();
 });
 
