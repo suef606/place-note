@@ -152,6 +152,18 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
   .filters{grid-template-columns:auto 1fr;align-items:center}
 }
 @media (min-width:1000px){ .places{grid-template-columns:repeat(3,1fr)} }
+
+/* ---------- 휴대폰: 아래 탭으로 한 화면씩 ---------- */
+.tabbar{display:none}
+@media (max-width:719px){
+  body.tabbed{padding-bottom:84px}
+  body.tabbed .hero{display:none}
+  body.tabbed main > section[data-tab]:not(.tab-on){display:none}
+  body.tabbed .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(252,250,246,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+  .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:14px;text-decoration:none;color:var(--muted);font-size:13px;font-weight:700}
+  .tabbar a span{font-size:20px;line-height:1}
+  .tabbar a[aria-current=page]{background:var(--cream);color:var(--ink)}
+}
 @media (prefers-reduced-motion:reduce){ .kw{animation:none} html{scroll-behavior:auto} }
 </style>
 </head>
@@ -184,7 +196,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
 </section>
 
 <!-- 1. 링크 붙여 넣고 열기 (로그인 없이도 사용 가능) -->
-<section id="open">
+<section id="open" data-tab>
   <div class="wrap">
     <div class="panel">
       <div class="panel-head"><span class="step">1</span>링크 붙여 넣기</div>
@@ -260,7 +272,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
 </section>
 
 <!-- 2. 저장 -->
-<section id="save" hidden>
+<section id="save" data-tab hidden>
   <div class="wrap">
     <div class="panel">
       <div class="panel-head"><span class="step">2</span>장소 저장하기</div>
@@ -315,7 +327,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
 </section>
 
 <!-- 3. 목록 -->
-<section id="list" hidden>
+<section id="list" data-tab hidden>
   <div class="wrap">
     <div class="panel">
       <div class="panel-head"><span class="step">3</span>저장된 장소</div>
@@ -333,6 +345,11 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
   </div>
 </section>
 </main>
+<nav class="tabbar" aria-label="화면 바꾸기">
+  <a href="#open" data-go="open"><span>🔗</span>붙여넣기</a>
+  <a href="#save" data-go="save"><span>✏️</span>자세히</a>
+  <a href="#list" data-go="list"><span>📍</span>목록</a>
+</nav>
 
 <footer>place-note · 2026년 11월 만듦 · KDT 생성형 AI 크리에이터 캠프 작품</footer>
 
@@ -476,6 +493,8 @@ function showSignedIn(user) {
   $('who').hidden = !user;
   $('quickRow').hidden = !user;
   $('whoEmail').textContent = user ? user.email : '';
+  document.body.classList.toggle('tabbed', !!user);
+  showTab();
   if (user) loadAll(); else { places = []; reviews = []; render(); }
 }
 
@@ -506,6 +525,7 @@ $('saveForm').addEventListener('submit', async (e) => {
   $('fName').value = ''; $('fWho').value = ''; $('fMemo').value = ''; $('fAddr').value = ''; $('placeBranch').value = ''; $('fPlanDate').value = ''; $('fPlanTime').value = ''; $('fPlanWith').value = '';
   $('msg').value = ''; $('placeName').value = ''; lastSourceUrl = ''; lastNaverUrl = ''; note($('findNote'), ''); refreshOpen();
   await loadAll();
+  if (isPhoneTabs()) location.hash = '#list'; // 휴대폰: 저장하면 목록으로
 });
 
 /* ---------- 그룹 고르기 ---------- */
@@ -605,6 +625,7 @@ $('quickSave').addEventListener('click', async () => {
   $('msg').value = ''; $('placeName').value = ''; $('placeBranch').value = ''; $('fName').value = ''; $('fAddr').value = '';
   lastSourceUrl = ''; lastNaverUrl = ''; note($('findNote'), ''); refreshOpen();
   await loadAll();
+  if (isPhoneTabs()) location.hash = '#list'; // 휴대폰: 저장하면 목록으로
 });
 
 /* ---------- 3. 목록 ---------- */
@@ -799,6 +820,19 @@ function alertSlot(slot, msg) { slot.innerHTML = `<p class="note err">${esc(msg)
   $('open').querySelector('.panel').prepend(banner);
   findName();
 })();
+
+/* ---------- 휴대폰 탭: 주소 끝(#open·#save·#list)으로 화면 바꾸기 → 뒤로가기도 돼요 ---------- */
+function isPhoneTabs() { return document.body.classList.contains('tabbed') && matchMedia('(max-width:719px)').matches; }
+function showTab() {
+  const h = location.hash.slice(1);
+  const id = ['open', 'save', 'list'].includes(h) ? h : 'open';
+  document.querySelectorAll('main > section[data-tab]').forEach((sec) => sec.classList.toggle('tab-on', sec.id === id));
+  document.querySelectorAll('.tabbar a').forEach((a) => {
+    if (a.dataset.go === id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  if (isPhoneTabs()) window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', showTab);
 
 /* ---------- 홈 화면 앱(공유 목록에 뜨게) ---------- */
 if ('serviceWorker' in navigator) {
