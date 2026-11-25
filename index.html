@@ -156,7 +156,8 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
 /* ---------- 휴대폰: 아래 탭으로 한 화면씩 ---------- */
 .tabbar{display:none}
 @media (max-width:719px){
-  body.tabbed{padding-bottom:84px}
+  body.tabbed{padding-bottom:130px}
+  #whoEmail{display:none} /* 휴대폰: 머리줄에 이메일 숨기기 (좁고, 화면 공유할 때 안전) */
   body.tabbed .hero{display:none}
   body.tabbed main > section[data-tab]:not(.tab-on){display:none}
   body.tabbed .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(252,250,246,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
