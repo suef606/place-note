@@ -106,7 +106,8 @@ function fromUrl(finalUrl) {
 }
 
 async function kakaoById(finalUrl, log) {
-  const m = finalUrl.match(/place\.map\.kakao\.com\/(?:m\/)?(\d+)/) || finalUrl.match(/[?&]itemId=(\d+)/);
+  const m = finalUrl.match(/place\.map\.kakao\.com\/(?:m\/)?(\d+)/) || finalUrl.match(/[?&]itemId=(\d+)/) ||
+    finalUrl.match(/applink\.map\.kakao\.com\/place\?(?:.*&)?id=(\d+)/); // 새 단축 링크(kko.to/e_…)
   if (!m) return '';
   // 카카오맵 장소 페이지가 쓰는 정보 주소 (공식 API 아님 — 바뀌면 안 될 수 있음)
   const id = m[1];
