@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>place-note · 받은 장소를 네이버지도로</title>
 <meta name="description" content="카카오맵·구글지도·네이버지도로 받은 장소를 네이버지도에서 열고, 추천한 사람·상태·후기를 함께 남기는 페이지">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#F6F1EA">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 :root{
@@ -110,6 +113,26 @@ textarea:focus,input:focus,select:focus{border-color:var(--oak-deep);background:
 .stars{color:var(--brass);letter-spacing:1px}
 .empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:16px}
 
+/* 그룹 고르기 (인스타 저장됨처럼) */
+.groups{margin-top:16px;padding:16px;border-radius:18px;background:var(--cream);border:1px solid var(--line)}
+.groups .chips{flex-wrap:wrap;overflow:visible}
+.groups .chip[aria-pressed=true]{background:var(--cognac);border-color:var(--cognac);color:#fff}
+.new-group{display:flex;gap:8px;margin-top:10px}
+.new-group input{flex:1;padding:10px 14px;font-size:16px}
+/* 약속·태그 */
+.plan{margin-top:12px;padding:16px;border-radius:18px;background:var(--cream);border:1px solid var(--line);display:grid;gap:14px}
+.plan .chips,.tagpick{display:flex;flex-wrap:wrap;gap:8px}
+.plan .chip[aria-pressed=true],.tagpick .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.plan input[type=text],.plan input[type=date]{padding:10px 14px;font-size:16px;margin-top:8px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--oak);color:var(--walnut)}
+.source-line{font-size:14px}
+.plan-line{margin-top:6px;font-size:15px;color:var(--ink);background:var(--paper);border:1px dashed var(--oak-deep);border-radius:12px;padding:6px 12px;display:inline-block}
+.when-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.when-row input[type=date],.when-row input[type=time],.when-row input[type=text]{flex:1;min-width:130px;margin-top:0}
+.tbd{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer}
+.tbd input{width:20px;height:20px;accent-color:var(--ink)}
+.share-banner{background:var(--ink);color:var(--paper);border-radius:16px;padding:12px 16px;font-size:15px;margin-bottom:14px}
 footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40px}
 
 @media (min-width:720px){
@@ -143,7 +166,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
   <div class="wrap">
     <span class="eyebrow">카카오맵 · 구글지도 · 네이버지도 → 네이버지도</span>
     <h1>받은 장소를<br><span class="kw">클릭 한 번</span>으로 네이버지도에서</h1>
-    <p class="sub">링크만 붙여 넣으면 장소 이름을 찾아 줘요. 저장할 때 추천한 사람, 상태, 폴더를 남기고, 가 본 뒤에는 후기를 쌓아요.</p>
+    <p class="sub">링크만 붙여 넣으면 장소 이름을 찾아 줘요. 그룹(친구·회사·데이트·가족…)에 저장하고, 가 본 뒤에는 누구랑 갔는지·별점·후기를 나만 보게 남겨요.</p>
   </div>
 </section>
 
@@ -172,7 +195,44 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
           <input type="text" id="placeName" placeholder="링크를 붙여 넣으면 여기에 들어가요" maxlength="200">
           <button class="btn btn-lg btn-naver" id="openNaver" type="button" disabled>네이버지도에서 열기</button>
         </div>
+        <div style="margin-top:14px">
+          <label for="placeBranch">지점·위치 <span class="hint">체인점이면 꼭! 예: 천호점, 강동구 천호동</span></label>
+          <input type="text" id="placeBranch" maxlength="300" placeholder="선택 — 네이버지도 검색과 저장에 함께 쓰여요">
+        </div>
         <p class="note" id="findNote"></p>
+        <div id="quickRow" hidden>
+        <div class="groups">
+          <label style="margin-bottom:10px">그룹 <span class="hint">하나 고르거나 새로 만들어요 (안 골라도 돼요)</span></label>
+          <div class="chips" id="groupPick" role="group" aria-label="그룹 고르기"></div>
+          <div class="new-group">
+            <input type="text" id="newGroup" maxlength="50" placeholder="＋ 새 그룹 이름 (예: 맛집투어)">
+          </div>
+        </div>
+        <div class="plan">
+          <div>
+            <label>📅 언제 가요?</label>
+            <div class="when-row">
+              <input type="date" id="whenDate" aria-label="약속 날짜">
+              <input type="time" id="whenTime" aria-label="약속 시간">
+              <label class="tbd"><input type="checkbox" id="whenTbd" checked> 미정</label>
+            </div>
+          </div>
+          <div>
+            <label>👥 누구랑? <span class="hint">3번 이상 함께한 사람은 추천으로 떠요</span></label>
+            <div class="chips" id="whoPick"></div>
+            <div class="when-row">
+              <input type="text" id="whoNew" maxlength="100" list="peopleList" placeholder="이름 쓰기 (예: 엄마, 지연)">
+              <label class="tbd"><input type="checkbox" id="whoTbd" checked> 미정</label>
+            </div>
+            <datalist id="peopleList"></datalist>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-lg btn-main" id="quickSave" type="button" disabled>⭐ 바로 저장</button>
+          <a class="btn btn-sm btn-ghost" href="#save">추천한 사람·메모까지 쓰려면 ↓</a>
+        </div>
+        </div>
+        <p class="note" id="quickNote"></p>
       </div>
     </div>
   </div>
@@ -208,7 +268,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
           <input type="text" id="fWho" maxlength="100">
         </div>
         <div>
-          <label for="fFolder">폴더 <span class="hint">예: 친구, 직장</span></label>
+          <label for="fFolder">그룹 <span class="hint">예: 친구, 회사, 데이트, 가족</span></label>
           <input type="text" id="fFolder" list="folderList" maxlength="50">
           <datalist id="folderList"></datalist>
         </div>
@@ -218,6 +278,22 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
             <input type="radio" name="st" id="stWant" value="want" checked><label for="stWant">가고 싶음</label>
             <input type="radio" name="st" id="stBeen" value="been"><label for="stBeen">가 봤음</label>
           </div>
+        </div>
+        <div>
+          <label for="fPlanDate">약속 날짜 <span class="hint">비워 두면 미정</span></label>
+          <input type="date" id="fPlanDate">
+        </div>
+        <div>
+          <label for="fPlanTime">약속 시간 <span class="hint">비워 두면 미정</span></label>
+          <input type="time" id="fPlanTime">
+        </div>
+        <div>
+          <label for="fPlanWith">누구랑 <span class="hint">비워 두면 미정</span></label>
+          <input type="text" id="fPlanWith" maxlength="100" list="peopleList">
+        </div>
+        <div class="full">
+          <label for="fAddr">지점·위치</label>
+          <input type="text" id="fAddr" maxlength="300" placeholder="예: 천호점, 강동구 천호동">
         </div>
         <div class="full">
           <label for="fMemo">한 줄 메모</label>
@@ -273,7 +349,7 @@ let lastSourceUrl = '';
 let lastNaverUrl = '';
 const cleanName = (n) => String(n || '').replace(/\s*[-|:·]\s*(Google|구글|카카오|Kakao|네이버|NAVER)[\s\S]*$/i, '').trim();
 
-const naverSearch = (name) => 'https://map.naver.com/p/search/' + encodeURIComponent(name);
+const naverSearch = (name, addr) => 'https://map.naver.com/p/search/' + encodeURIComponent([name, addr].filter(Boolean).join(' ').trim());
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const fmtDate = (d) => { const t = new Date(d); return isNaN(t) ? '' : `${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')}`; };
 const stars = (n) => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
@@ -298,6 +374,7 @@ async function findName() {
   const text = $('msg').value.trim();
   const seq = ++findSeq;
   lastNaverUrl = '';
+  note($('quickNote'), '');
   if (!text) { $('placeName').value = ''; note($('findNote'), ''); refreshOpen(); return; }
 
   const textName = pickName(text);
@@ -326,7 +403,7 @@ async function findName() {
       $('placeName').value = textName;
       note($('findNote'), textName
         ? '링크에서는 못 찾아서 함께 붙여 넣은 글에서 골랐어요. 맞는지 확인해 주세요.'
-        : (data.error || '장소 이름을 찾지 못했어요') + ' — 이름을 직접 써 주세요.', textName ? '' : 'err');
+        : (data.error || '장소 이름을 찾지 못했어요') + ' — 이름을 직접 써 주세요.' + (data.debug ? ' [' + data.debug + ']' : ''), textName ? '' : 'err');
     }
   } catch {
     if (seq !== findSeq) return;
@@ -336,16 +413,17 @@ async function findName() {
   syncSaveName(); refreshOpen();
 }
 
-function refreshOpen() { $('openNaver').disabled = !$('placeName').value.trim(); }
+function refreshOpen() { const empty = !$('placeName').value.trim(); $('openNaver').disabled = empty; $('quickSave').disabled = empty; }
 function syncSaveName() {
   if (/^https?:\/\//i.test($('placeName').value.trim())) { $('placeName').value = ''; refreshOpen(); return; } if ($('placeName').value.trim()) $('fName').value = $('placeName').value.trim(); }
 
 let debounce;
 $('msg').addEventListener('input', () => { clearTimeout(debounce); debounce = setTimeout(findName, 350); });
 $('placeName').addEventListener('input', () => { lastNaverUrl = ''; refreshOpen(); syncSaveName(); });
+$('placeBranch').addEventListener('input', () => { $('fAddr').value = $('placeBranch').value.trim(); });
 $('openNaver').addEventListener('click', () => {
   const q = cleanName($('placeName').value);
-  if (q) window.open(lastNaverUrl || naverSearch(q), '_blank', 'noopener');
+  if (q) window.open(lastNaverUrl || naverSearch(q, $('placeBranch').value.trim()), '_blank', 'noopener');
 });
 $('clearBtn').addEventListener('click', () => { $('msg').value = ''; findName(); $('msg').focus(); });
 $('pasteBtn').addEventListener('click', async () => {
@@ -381,6 +459,7 @@ function showSignedIn(user) {
   $('save').hidden = !user;
   $('list').hidden = !user;
   $('who').hidden = !user;
+  $('quickRow').hidden = !user;
   $('whoEmail').textContent = user ? user.email : '';
   if (user) loadAll(); else { places = []; reviews = []; render(); }
 }
@@ -398,15 +477,118 @@ $('saveForm').addEventListener('submit', async (e) => {
     folder: $('fFolder').value.trim() || null,
     status: document.querySelector('input[name=st]:checked').value,
     memo: $('fMemo').value.trim() || null,
-    naver_url: (lastNaverUrl && name === cleanName($('placeName').value)) ? lastNaverUrl : naverSearch(name),
+    address: $('fAddr').value.trim() || null,
+    plan_date: $('fPlanDate').value || null,
+    plan_time: $('fPlanTime').value || null,
+    plan_with: $('fPlanWith').value.trim() || null,
+    naver_url: (lastNaverUrl && name === cleanName($('placeName').value)) ? lastNaverUrl : naverSearch(name, $('fAddr').value.trim()),
     source_url: lastSourceUrl || null,
   };
   const { error } = await sb.from('places').insert(row);
   $('saveBtn').disabled = false;
   if (error) { note($('saveNote'), '저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'err'); console.error(error); return; }
   note($('saveNote'), `"${name}" 저장했어요!`, 'ok');
-  $('fName').value = ''; $('fWho').value = ''; $('fMemo').value = '';
+  $('fName').value = ''; $('fWho').value = ''; $('fMemo').value = ''; $('fAddr').value = ''; $('placeBranch').value = ''; $('fPlanDate').value = ''; $('fPlanTime').value = ''; $('fPlanWith').value = '';
   $('msg').value = ''; $('placeName').value = ''; lastSourceUrl = ''; lastNaverUrl = ''; note($('findNote'), ''); refreshOpen();
+  await loadAll();
+});
+
+/* ---------- 그룹 고르기 ---------- */
+const DEFAULT_GROUPS = ['친구', '회사', '데이트', '가족'];
+let pickedGroup = '';
+function renderGroupPick() {
+  const mine = [...new Set(places.map((x) => x.folder).filter(Boolean))];
+  const all = [...new Set([...DEFAULT_GROUPS, ...mine])];
+  if (pickedGroup && !all.includes(pickedGroup)) all.push(pickedGroup);
+  $('groupPick').innerHTML = all.map((g) => {
+    const n = places.filter((x) => x.folder === g).length;
+    return `<button class="chip" type="button" data-g="${esc(g)}" aria-pressed="${pickedGroup === g}">${esc(g)}${n ? ' ' + n : ''}</button>`;
+  }).join('');
+}
+$('groupPick').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  pickedGroup = pickedGroup === b.dataset.g ? '' : b.dataset.g;
+  $('newGroup').value = '';
+  renderGroupPick();
+});
+$('newGroup').addEventListener('input', () => {
+  pickedGroup = $('newGroup').value.trim();
+  renderGroupPick();
+});
+
+/* ---------- 언제·누구랑 ---------- */
+const TAGS = ['주차 가능', '주차 어려움', '웨이팅 있음', '웨이팅 없음', '예약 추천', '꼭 먹을 메뉴 있음', '가성비 좋음', '분위기 좋음', '또 갈래요'];
+const ymd = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+let pickedWho = '';  // '' = 미정
+// 날짜·시간 칸을 건드리면 '미정' 체크가 자동으로 풀려요
+$('whenDate').addEventListener('input', () => { $('whenTbd').checked = !$('whenDate').value; });
+$('whenTime').addEventListener('input', () => { if ($('whenTime').value) $('whenTbd').checked = false; });
+$('whenTbd').addEventListener('change', () => { if ($('whenTbd').checked) { $('whenDate').value = ''; $('whenTime').value = ''; } });
+function peopleCounts() {
+  const c = {};
+  [...places.map((x) => x.plan_with), ...reviews.map((r) => r.with_whom)]
+    .filter((n) => n && n !== '혼자').forEach((n) => { c[n] = (c[n] || 0) + 1; });
+  return c;
+}
+function renderWhoPick() {
+  const c = peopleCounts();
+  const frequent = Object.keys(c).filter((n) => c[n] >= 3).sort((a, b) => c[b] - c[a]).slice(0, 6);
+  const list = [...frequent, '혼자'];
+  $('whoPick').innerHTML = list.map((n) => `<button class="chip" type="button" data-n="${esc(n)}" aria-pressed="${pickedWho === n}">${esc(n)}</button>`).join('');
+  $('peopleList').innerHTML = Object.keys(c).sort((a, b) => c[b] - c[a]).map((n) => `<option value="${esc(n)}">`).join('');
+}
+$('whoPick').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  pickedWho = pickedWho === b.dataset.n ? '' : b.dataset.n;
+  $('whoNew').value = pickedWho; $('whoTbd').checked = !pickedWho; renderWhoPick();
+});
+$('whoNew').addEventListener('input', () => { pickedWho = $('whoNew').value.trim(); $('whoTbd').checked = !pickedWho; renderWhoPick(); });
+$('whoTbd').addEventListener('change', () => { if ($('whoTbd').checked) { pickedWho = ''; $('whoNew').value = ''; renderWhoPick(); } });
+function resetPlan() {
+  $('whenDate').value = ''; $('whenTime').value = ''; $('whenTbd').checked = true;
+  pickedWho = ''; $('whoNew').value = ''; $('whoTbd').checked = true;
+  renderWhoPick();
+}
+/* 출처 한 줄: 어느 지도에서 · 누가 추천 · 약속 잡은 날 */
+const mapFrom = (u) => {
+  if (!/^https?:\/\//i.test(u || '')) return '직접 입력';
+  if (/kakao/i.test(u)) return '카카오맵';
+  if (/google|goo\.gl/i.test(u)) return '구글지도';
+  if (/naver/i.test(u)) return '네이버지도';
+  return '링크';
+};
+const sourceLine = (x) => [
+  `🔗 ${mapFrom(x.source_url)}에서`,
+  x.recommender ? `<b>${esc(x.recommender)}</b> 추천` : '',
+  `🤝 ${fmtDate(x.agreed_on || x.created_at)} 약속 잡음`
+].filter(Boolean).join(' · ');
+const fmtTime = (t) => t ? ' ' + String(t).slice(0, 5) : '';
+const fmtPlan = (x) => `📅 ${x.plan_date ? fmtDate(x.plan_date) + fmtTime(x.plan_time) : '날짜 미정'} · 👥 ${x.plan_with ? esc(x.plan_with) + (x.plan_with === '혼자' ? '' : '와(과)') : '누구랑 미정'}`;
+
+/* ---------- 바로 저장 ---------- */
+$('quickSave').addEventListener('click', async () => {
+  const name = cleanName($('placeName').value);
+  if (!name) return;
+  const addr = $('placeBranch').value.trim();
+  $('quickSave').disabled = true;
+  note($('quickNote'), '저장하는 중이에요…');
+  const { error } = await sb.from('places').insert({
+    name,
+    address: addr || null,
+    status: 'want',
+    folder: pickedGroup || null,
+    plan_date: $('whenTbd').checked ? null : ($('whenDate').value || null),
+    plan_time: $('whenTbd').checked ? null : ($('whenTime').value || null),
+    plan_with: $('whoTbd').checked ? null : (pickedWho || null),
+    source_url: lastSourceUrl || null,
+    naver_url: lastNaverUrl || naverSearch(name, addr),
+  });
+  $('quickSave').disabled = false;
+  if (error) { note($('quickNote'), '저장하지 못했어요. 잠시 후 다시 시도해 주세요.', 'err'); console.error(error); return; }
+  note($('quickNote'), `"${name}"을(를) ${pickedGroup ? `'${pickedGroup}' 그룹에 ` : ''}저장했어요! 목록에서 추천한 사람·후기를 덧붙일 수 있어요.`, 'ok');
+  pickedGroup = ''; $('newGroup').value = ''; resetPlan();
+  $('msg').value = ''; $('placeName').value = ''; $('placeBranch').value = ''; $('fName').value = ''; $('fAddr').value = '';
+  lastSourceUrl = ''; lastNaverUrl = ''; note($('findNote'), ''); refreshOpen();
   await loadAll();
 });
 
@@ -422,13 +604,15 @@ async function loadAll() {
 }
 
 function render() {
+  renderGroupPick();
+  renderWhoPick();
   // 폴더 목록
   const folders = [...new Set(places.map((x) => x.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'));
   if (filterFolder !== 'all' && filterFolder !== 'none' && !folders.includes(filterFolder)) filterFolder = 'all';
   $('folderList').innerHTML = folders.map((f) => `<option value="${esc(f)}">`).join('');
   const hasNone = places.some((x) => !x.folder);
-  const fChips = [['all', '📁 모든 폴더']].concat(folders.map((f) => [f, f]));
-  if (hasNone && folders.length) fChips.push(['none', '폴더 없음']);
+  const fChips = [['all', '📁 모든 그룹']].concat(folders.map((f) => [f, f]));
+  if (hasNone && folders.length) fChips.push(['none', '그룹 없음']);
   $('folderChips').innerHTML = fChips.map(([v, label]) => {
     const n = v === 'all' ? places.length : v === 'none' ? places.filter((x) => !x.folder).length : places.filter((x) => x.folder === v).length;
     return `<button class="chip" type="button" data-folder="${esc(v)}" aria-pressed="${filterFolder === v}">${esc(label)} ${n}</button>`;
@@ -451,9 +635,10 @@ function render() {
       </div>
       <div class="meta">
         ${x.folder ? `<span class="folder-tag">${esc(x.folder)}</span>` : ''}
-        ${x.recommender ? `<span>추천 <b>${esc(x.recommender)}</b></span>` : ''}
-        <span>${fmtDate(x.created_at)} 저장</span>
       </div>
+      <div class="meta source-line">${sourceLine(x)}</div>
+      ${x.address ? `<div class="meta">📍 ${esc(x.address)}</div>` : ''}
+      ${x.status === 'want' ? `<div class="plan-line">${fmtPlan(x)}</div>` : ''}
       ${x.memo ? `<p class="memo">${esc(x.memo)}</p>` : ''}
       ${rs.length ? `<ul class="reviews">${rs.map((r) => `
         <li class="review">
@@ -462,10 +647,13 @@ function render() {
             ${r.with_whom ? `<span>${esc(r.with_whom)}와(과)</span>` : ''}
             ${r.rating ? `<span class="stars" aria-label="별점 ${r.rating}점">${stars(r.rating)}</span>` : ''}
           </div>
+          ${(r.tags && r.tags.length) ? `<div class="tags">${r.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+          ${r.must_eat ? `<div>🍽 꼭 먹을 메뉴: <b>${esc(r.must_eat)}</b></div>` : ''}
           ${r.comment ? `<div>${esc(r.comment)}</div>` : ''}
         </li>`).join('')}</ul>` : ''}
       <div class="actions">
-        <a class="btn btn-sm btn-naver" href="${esc(x.naver_url || naverSearch(x.name))}" target="_blank" rel="noopener">네이버지도</a>
+        <a class="btn btn-sm btn-naver" href="${esc(x.naver_url || naverSearch(x.name, x.address))}" target="_blank" rel="noopener">네이버지도</a>
+        ${/^https?:\/\//i.test(x.source_url || '') ? `<a class="btn btn-sm btn-ghost" href="${esc(x.source_url)}" target="_blank" rel="noopener">받은 링크</a>` : ''}
         <button class="btn btn-sm btn-ghost" type="button" data-act="review">✍️ 후기</button>
         <button class="btn btn-sm btn-ghost" type="button" data-act="edit">고치기</button>
         <button class="btn btn-sm btn-danger" type="button" data-act="del">지우기</button>
@@ -514,8 +702,13 @@ $('places').addEventListener('click', async (e) => {
       <form class="edit-box">
         <div><label>장소 이름</label><input type="text" name="name" maxlength="200" required value="${esc(x.name)}"></div>
         <div><label>추천한 사람</label><input type="text" name="recommender" maxlength="100" value="${esc(x.recommender || '')}"></div>
-        <div><label>폴더</label><input type="text" name="folder" maxlength="50" list="folderList" value="${esc(x.folder || '')}"></div>
+        <div><label>그룹</label><input type="text" name="folder" maxlength="50" list="folderList" value="${esc(x.folder || '')}"></div>
         <div><label>상태</label><select name="status"><option value="want"${x.status==='want'?' selected':''}>가고 싶음</option><option value="been"${x.status==='been'?' selected':''}>가 봤음</option></select></div>
+        <div><label>지점·위치</label><input type="text" name="address" maxlength="300" value="${esc(x.address || '')}"></div>
+        ${'agreed_on' in x ? `<div><label>약속 잡은 날</label><input type="date" name="agreed_on" value="${esc(x.agreed_on || '')}"></div>` : ''}
+        <div><label>약속 날짜 <span class="hint">비우면 미정</span></label><input type="date" name="plan_date" value="${esc(x.plan_date || '')}"></div>
+        <div><label>약속 시간 <span class="hint">비우면 미정</span></label><input type="time" name="plan_time" value="${esc(x.plan_time ? String(x.plan_time).slice(0,5) : '')}"></div>
+        <div><label>누구랑 <span class="hint">비우면 미정</span></label><input type="text" name="plan_with" maxlength="100" list="peopleList" value="${esc(x.plan_with || '')}"></div>
         <div><label>한 줄 메모</label><input type="text" name="memo" maxlength="300" value="${esc(x.memo || '')}"></div>
         <div class="actions" style="margin-top:0"><button class="btn btn-sm btn-ink" type="submit">고친 내용 저장</button><button class="btn btn-sm btn-ghost" type="button" data-cancel>닫기</button></div>
         <p class="note"></p>
@@ -525,8 +718,9 @@ $('places').addEventListener('click', async (e) => {
     f.onsubmit = async (ev) => {
       ev.preventDefault();
       const name = f.name.value.trim(); if (!name) return;
-      const upd = { name, recommender: f.recommender.value.trim() || null, folder: f.folder.value.trim() || null, status: f.status.value, memo: f.memo.value.trim() || null };
-      if (name !== x.name) upd.naver_url = naverSearch(name);
+      const upd = { name, recommender: f.recommender.value.trim() || null, folder: f.folder.value.trim() || null, status: f.status.value, memo: f.memo.value.trim() || null, address: f.address.value.trim() || null, plan_date: f.plan_date.value || null, plan_time: f.plan_time.value || null, plan_with: f.plan_with.value.trim() || null };
+      if (f.agreed_on && f.agreed_on.value) upd.agreed_on = f.agreed_on.value;
+      if ((name !== x.name || upd.address !== x.address) && !/\/place\/\d+/.test(x.naver_url || '')) upd.naver_url = naverSearch(name, upd.address);
       const { error } = await sb.from('places').update(upd).eq('id', id);
       if (error) { note(f.querySelector('.note'), '저장하지 못했어요. 다시 시도해 주세요.', 'err'); return; }
       await loadAll();
@@ -539,25 +733,34 @@ $('places').addEventListener('click', async (e) => {
     const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     slot.innerHTML = `
       <form class="review-box">
-        <div><label>간 날짜</label><input type="date" name="visited_on" value="${today}"></div>
-        <div><label>누구랑 갔나요</label><input type="text" name="with_whom" maxlength="100"></div>
+        <div><label>간 날짜 <span class="hint">약속 날짜가 미리 들어가요</span></label><input type="date" name="visited_on" value="${esc(x.plan_date || today)}"></div>
+        <div><label>누구랑 갔나요</label><input type="text" name="with_whom" maxlength="100" list="peopleList" value="${esc(x.plan_with || '')}"></div>
         <div><label>평가</label><select name="rating"><option value="">선택 안 함</option><option value="5">★★★★★ 5</option><option value="4">★★★★☆ 4</option><option value="3">★★★☆☆ 3</option><option value="2">★★☆☆☆ 2</option><option value="1">★☆☆☆☆ 1</option></select></div>
-        <div><label>한 줄 후기</label><input type="text" name="comment" maxlength="500"></div>
+        <div><label>태그 <span class="hint">눌러서 고르기</span></label><div class="tagpick">${TAGS.map((t) => `<button class="chip" type="button" data-tag="${esc(t)}" aria-pressed="false">${esc(t)}</button>`).join('')}</div></div>
+        <div><label>🍽 꼭 먹을 메뉴 <span class="hint">있으면</span></label><input type="text" name="must_eat" maxlength="200" placeholder="예: 회덮밥"></div>
+        <div><label>후기·특이점 <span class="hint">태그에 없는 것만 짧게</span></label><textarea name="comment" maxlength="500" style="min-height:80px"></textarea></div>
         <div class="actions" style="margin-top:0"><button class="btn btn-sm btn-main" type="submit">후기 남기기</button><button class="btn btn-sm btn-ghost" type="button" data-cancel>닫기</button></div>
         <p class="note">후기를 남기면 상태가 '가 봤음'으로 바뀌어요.</p>
       </form>`;
     const f = slot.querySelector('form');
     f.querySelector('[data-cancel]').onclick = () => (slot.innerHTML = '');
+    f.querySelector('.tagpick').addEventListener('click', (e) => {
+      const b = e.target.closest('.chip'); if (!b) return;
+      b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true');
+    });
     f.onsubmit = async (ev) => {
       ev.preventDefault();
+      const tags = [...f.querySelectorAll('.tagpick .chip[aria-pressed=true]')].map((b) => b.dataset.tag);
       const row = {
+        tags,
+        must_eat: f.must_eat.value.trim() || null,
         place_id: id,
         visited_on: f.visited_on.value || null,
         with_whom: f.with_whom.value.trim() || null,
         rating: f.rating.value ? Number(f.rating.value) : null,
         comment: f.comment.value.trim() || null,
       };
-      if (!row.visited_on && !row.with_whom && !row.rating && !row.comment) { note(f.querySelector('.note'), '한 칸 이상 채워 주세요.', 'err'); return; }
+      if (!row.visited_on && !row.with_whom && !row.rating && !row.comment && !tags.length && !row.must_eat) { note(f.querySelector('.note'), '한 칸 이상 채워 주세요.', 'err'); return; }
       const { error } = await sb.from('reviews').insert(row);
       if (error) { note(f.querySelector('.note'), '후기를 저장하지 못했어요. 다시 시도해 주세요.', 'err'); return; }
       if (x.status !== 'been') await sb.from('places').update({ status: 'been' }).eq('id', id);
@@ -567,6 +770,25 @@ $('places').addEventListener('click', async (e) => {
 });
 
 function alertSlot(slot, msg) { slot.innerHTML = `<p class="note err">${esc(msg)} 잠시 후 다시 시도해 주세요.</p>`; }
+
+/* ---------- 카톡 등에서 '공유'로 들어왔을 때 ---------- */
+(function fromShare() {
+  const q = new URLSearchParams(location.search);
+  const shared = [q.get('title'), q.get('text'), q.get('url')].filter(Boolean).join('\n').trim();
+  if (!shared) return;
+  $('msg').value = shared;
+  history.replaceState(null, '', location.pathname + location.hash);
+  const banner = document.createElement('div');
+  banner.className = 'share-banner';
+  banner.textContent = '📤 공유받은 링크를 넣었어요. 그룹·날짜·누구랑을 고르고 ⭐ 바로 저장을 눌러요.';
+  $('open').querySelector('.panel').prepend(banner);
+  findName();
+})();
+
+/* ---------- 홈 화면 앱(공유 목록에 뜨게) ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 
 /* ---------- 시작 ---------- */
 if (!configured) {
