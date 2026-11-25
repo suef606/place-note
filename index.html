@@ -71,6 +71,12 @@ textarea:focus,input:focus,select:focus{border-color:var(--oak-deep);background:
 .note{margin-top:10px;font-size:14px;color:var(--muted);min-height:1.4em}
 .note.ok{color:var(--sage);font-weight:700}
 .note.err{color:var(--danger);font-weight:700}
+.note.busy{display:inline-flex;align-items:center;gap:10px;font-size:17px;font-weight:700;color:var(--ink);background:var(--paper);border:2px dashed var(--oak-deep);border-radius:12px;padding:8px 14px}
+.note.busy::before{content:'';width:18px;height:18px;border:3px solid var(--oak-deep);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+input.finding{animation:finding 1.2s ease-in-out infinite;font-weight:700}
+input.finding::placeholder{color:var(--ink);opacity:1}
+@keyframes finding{50%{background:var(--paper);border-color:var(--oak-deep)}}
 
 /* 로그인 */
 .login{max-width:560px;margin:0 auto}
@@ -373,6 +379,7 @@ let findSeq = 0;
 async function findName() {
   const text = $('msg').value.trim();
   const seq = ++findSeq;
+  $('placeName').placeholder = '링크를 붙여 넣으면 여기에 들어가요'; $('placeName').classList.remove('finding');
   lastNaverUrl = '';
   note($('quickNote'), '');
   if (!text) { $('placeName').value = ''; note($('findNote'), ''); refreshOpen(); return; }
@@ -387,11 +394,17 @@ async function findName() {
     syncSaveName(); refreshOpen(); return;
   }
 
-  note($('findNote'), '링크에서 장소 이름을 찾는 중이에요…');
+  note($('findNote'), '🔍 장소 이름 찾는 중… (1~3초)', 'busy');
+  const pn = $('placeName'), ph = '링크를 붙여 넣으면 여기에 들어가요';
+  pn.value = ''; pn.placeholder = '🔍 장소 이름 찾는 중…'; pn.classList.add('finding');
+  const doneFinding = () => { pn.placeholder = ph; pn.classList.remove('finding'); };
+  const minWait = new Promise((r) => setTimeout(r, 700)); // 너무 빨리 사라지지 않게
   try {
     const res = await fetch('/api/resolve?url=' + encodeURIComponent(link));
     const data = await res.json().catch(() => ({}));
+    await minWait;
     if (seq !== findSeq) return;
+    doneFinding();
     if (res.ok && data.name) {
       data.name = cleanName(data.name);
       $('placeName').value = data.name;
@@ -407,6 +420,7 @@ async function findName() {
     }
   } catch {
     if (seq !== findSeq) return;
+    doneFinding();
     $('placeName').value = textName;
     note($('findNote'), '링크 읽기는 Vercel 주소에서만 돼요. 이름을 직접 써 주세요.', 'err');
   }
