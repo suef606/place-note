@@ -196,14 +196,14 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
       </div>
 
       <div style="margin-top:18px">
-        <label for="placeName">찾은 장소 이름 <span class="hint">틀리면 직접 고쳐 주세요</span></label>
+        <label for="placeName">찾은 장소 이름 <span class="hint">틀리면 직접 고쳐 주세요 · 체인점은 지점명까지 (예: 올리브영 천호역점)</span></label>
         <div class="row">
           <input type="text" id="placeName" placeholder="링크를 붙여 넣으면 여기에 들어가요" maxlength="200">
           <button class="btn btn-lg btn-naver" id="openNaver" type="button" disabled>네이버지도에서 열기</button>
         </div>
         <div style="margin-top:14px">
-          <label for="placeBranch">지점·위치 <span class="hint">체인점이면 꼭! 예: 천호점, 강동구 천호동</span></label>
-          <input type="text" id="placeBranch" maxlength="300" placeholder="선택 — 네이버지도 검색과 저장에 함께 쓰여요">
+          <label for="placeBranch">📍 위치 메모 <span class="hint">나만 아는 위치 설명. 예: 천호역 3번 출구 앞, 현대백화점 옆 골목</span></label>
+          <input type="text" id="placeBranch" maxlength="300" placeholder="선택 — 카드에 📍로 보여요 (네이버지도 검색에는 안 쓰여요)">
         </div>
         <p class="note" id="findNote"></p>
         <div id="quickRow" hidden>
@@ -298,7 +298,7 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
           <input type="text" id="fPlanWith" maxlength="100" list="peopleList">
         </div>
         <div class="full">
-          <label for="fAddr">지점·위치</label>
+          <label for="fAddr">📍 위치 메모</label>
           <input type="text" id="fAddr" maxlength="300" placeholder="예: 천호점, 강동구 천호동">
         </div>
         <div class="full">
@@ -355,7 +355,8 @@ let lastSourceUrl = '';
 let lastNaverUrl = '';
 const cleanName = (n) => String(n || '').replace(/\s*[-|:·]\s*(Google|구글|카카오|Kakao|네이버|NAVER)[\s\S]*$/i, '').trim();
 
-const naverSearch = (name, addr) => 'https://map.naver.com/p/search/' + encodeURIComponent([name, addr].filter(Boolean).join(' ').trim());
+// 네이버지도 검색은 장소 이름만으로 (위치 메모는 나만 보는 설명이라 검색에 넣지 않아요)
+const naverSearch = (name) => 'https://map.naver.com/p/search/' + encodeURIComponent(String(name || '').trim());
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 const fmtDate = (d) => { const t = new Date(d); return isNaN(t) ? '' : `${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')}`; };
 const stars = (n) => n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
@@ -718,7 +719,7 @@ $('places').addEventListener('click', async (e) => {
         <div><label>추천한 사람</label><input type="text" name="recommender" maxlength="100" value="${esc(x.recommender || '')}"></div>
         <div><label>그룹</label><input type="text" name="folder" maxlength="50" list="folderList" value="${esc(x.folder || '')}"></div>
         <div><label>상태</label><select name="status"><option value="want"${x.status==='want'?' selected':''}>가고 싶음</option><option value="been"${x.status==='been'?' selected':''}>가 봤음</option></select></div>
-        <div><label>지점·위치</label><input type="text" name="address" maxlength="300" value="${esc(x.address || '')}"></div>
+        <div><label>📍 위치 메모</label><input type="text" name="address" maxlength="300" value="${esc(x.address || '')}"></div>
         ${'agreed_on' in x ? `<div><label>약속 잡은 날</label><input type="date" name="agreed_on" value="${esc(x.agreed_on || '')}"></div>` : ''}
         <div><label>약속 날짜 <span class="hint">비우면 미정</span></label><input type="date" name="plan_date" value="${esc(x.plan_date || '')}"></div>
         <div><label>약속 시간 <span class="hint">비우면 미정</span></label><input type="time" name="plan_time" value="${esc(x.plan_time ? String(x.plan_time).slice(0,5) : '')}"></div>
@@ -734,7 +735,7 @@ $('places').addEventListener('click', async (e) => {
       const name = f.name.value.trim(); if (!name) return;
       const upd = { name, recommender: f.recommender.value.trim() || null, folder: f.folder.value.trim() || null, status: f.status.value, memo: f.memo.value.trim() || null, address: f.address.value.trim() || null, plan_date: f.plan_date.value || null, plan_time: f.plan_time.value || null, plan_with: f.plan_with.value.trim() || null };
       if (f.agreed_on && f.agreed_on.value) upd.agreed_on = f.agreed_on.value;
-      if ((name !== x.name || upd.address !== x.address) && !/\/place\/\d+/.test(x.naver_url || '')) upd.naver_url = naverSearch(name, upd.address);
+      if (name !== x.name && !/\/place\/\d+/.test(x.naver_url || '')) upd.naver_url = naverSearch(name, upd.address);
       const { error } = await sb.from('places').update(upd).eq('id', id);
       if (error) { note(f.querySelector('.note'), '저장하지 못했어요. 다시 시도해 주세요.', 'err'); return; }
       await loadAll();
