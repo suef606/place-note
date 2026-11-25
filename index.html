@@ -196,13 +196,13 @@ footer{text-align:center;color:var(--muted);font-size:14px;padding:20px 22px 40p
       </div>
 
       <div style="margin-top:18px">
-        <label for="placeName">찾은 장소 이름 <span class="hint">틀리면 직접 고쳐 주세요 · 체인점은 지점명까지 (예: 올리브영 천호역점)</span></label>
+        <label for="placeName">찾은 장소 이름 <span class="hint">틀리면 직접 고쳐 주세요</span></label>
         <div class="row">
           <input type="text" id="placeName" placeholder="링크를 붙여 넣으면 여기에 들어가요" maxlength="200">
           <button class="btn btn-lg btn-naver" id="openNaver" type="button" disabled>네이버지도에서 열기</button>
         </div>
         <div style="margin-top:14px">
-          <label for="placeBranch">📍 위치 메모 <span class="hint">나만 아는 위치 설명. 예: 천호역 3번 출구 앞, 현대백화점 옆 골목</span></label>
+          <label for="placeBranch">📍 위치 메모 <span class="hint">나만 아는 위치 설명. 예: ○○역 근처, 회사 옆 골목</span></label>
           <input type="text" id="placeBranch" maxlength="300" placeholder="선택 — 카드에 📍로 보여요 (네이버지도 검색에는 안 쓰여요)">
         </div>
         <p class="note" id="findNote"></p>
@@ -395,9 +395,9 @@ async function findName() {
     syncSaveName(); refreshOpen(); return;
   }
 
-  note($('findNote'), '🔍 장소 이름 찾는 중… (1~3초)', 'busy');
+  note($('findNote'), '');
   const pn = $('placeName'), ph = '링크를 붙여 넣으면 여기에 들어가요';
-  pn.value = ''; pn.placeholder = '🔍 장소 이름 찾는 중…'; pn.classList.add('finding');
+  pn.value = ''; pn.placeholder = '🔍 장소 이름 찾는 중… (1~3초)'; pn.classList.add('finding');
   const doneFinding = () => { pn.placeholder = ph; pn.classList.remove('finding'); };
   const minWait = new Promise((r) => setTimeout(r, 700)); // 너무 빨리 사라지지 않게
   try {
@@ -412,7 +412,7 @@ async function findName() {
       lastNaverUrl = (data.source === 'naver' && /\/place\/\d+/.test(data.finalUrl || ''))
         ? 'https://map.naver.com/p/entry/place/' + data.finalUrl.match(/\/place\/(\d+)/)[1] : '';
       const from = { kakao: '카카오맵', google: '구글지도', naver: '네이버지도' }[data.source] || '링크';
-      note($('findNote'), `${from} 링크에서 찾았어요: ${data.name}`, 'ok');
+      note($('findNote'), `✓ ${from} 링크에서 찾았어요`, 'ok');
     } else {
       $('placeName').value = textName;
       note($('findNote'), textName
